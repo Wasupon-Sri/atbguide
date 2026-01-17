@@ -501,7 +501,7 @@
 </div>
 
 <script>
-    // --- Data Source ---
+    // --- Data Source  ---
     const drugData = {
         ceftazidime: {
             name: "Ceftazidime",
@@ -541,7 +541,7 @@
             admin: "Check bleeding risk (Hypoprothrombinemia). Vit K 10mg IV weekly rec.",
             renal: [
                 { min: 30, dose: "3 g q 6 hr OR 4.5 g q 8 hr", freq: "drip 4 hr" },
-                { min: 15, dose: "3 g (Cef 8g, Sul 4g)", freq: "q 6-8 hr (drip 4 hr)" },
+                { min: 15, dose: "3 g (Cef 8g, Sul 4g)", freq: "q 6 hr (drip 4 hr)" },
                 { min: 0, dose: "3 g (Cef 4-6g, Sul 2-3g)", freq: "q 8-12 hr (drip 4 hr)" }
             ],
             dialysis: {
@@ -616,7 +616,7 @@
             renal: [
                 { min: 50, dose: "500 mg drip 2-3 hr", freq: "q 6 hr" },
                 { min: 30, dose: "500 mg drip 2-3 hr", freq: "q 8 hr" },
-                { min: 15, dose: "250 mg drip 2-3 hr", freq: "q 6 hr" },
+                { min: 15, dose: "250 mg drip 2-3 hr", freq: "q 8 hr" },
                 { min: 0, dose: "250 mg drip 2-3 hr", freq: "q 12 hr" }
             ],
             dialysis: {
@@ -762,7 +762,14 @@
         const inchesOver5ft = (height - 150) / 2.54;
         let ibw = (gender === 'male') ? 50 + (2.3 * inchesOver5ft) : 45.5 + (2.3 * inchesOver5ft);
         let adjBw = ibw + 0.4 * (weight - ibw);
+        
+        // Weight selection logic: 
+        // Aminoglycosides use AdjBW if BMI >= 23.
+        // Vancomycin uses Actual Body Weight (ABW).
+        // General purpose "dosingWeight" follows the BMI>=23 rule for consistency with other drugs,
+        // but Vanco will override this.
         let dosingWeight = (bmi >= 23) ? adjBw : weight;
+        
         let crcl = ((140 - age) * ibw) / (72 * scr);
         if (gender === 'female') crcl *= 0.85;
 
@@ -772,14 +779,18 @@
         document.getElementById('res_adjbw').innerText = isNaN(adjBw) ? '--' : adjBw.toFixed(1);
         document.getElementById('res_crcl').innerText = isNaN(crcl) ? '--' : crcl.toFixed(0);
 
-        return { crcl, dosingWeight, drugId, error: false };
+        return { crcl, dosingWeight, weight, drugId, error: false };
     }
 
     function getDoseForCrCl(drug, crcl) {
         if (isNaN(crcl)) return "--";
         if(drug.name.includes("Ertapenem")) {
             const albumin = parseFloat(document.getElementById('albumin').value);
-            if (albumin < 2.5 && crcl >= 30) return "1 g q 12 hr (Low Albumin)";
+            // Check low albumin condition
+            if (albumin < 2.5) {
+                if (crcl >= 30) return "1 g q 12 hr (Low Albumin)";
+                if (crcl < 30)  return "1 g q 24 hr (Low Albumin)";
+            }
         }
         for (let row of drug.renal) {
             if (crcl >= row.min) return `${row.dose} <b>${row.freq}</b>`;
@@ -787,16 +798,19 @@
         return "Check Specialist";
     }
 
-    function calculateWeightBasedDose(drugId, weight) {
+    function calculateWeightBasedDose(drugId, dosingWeight, actualWeight) {
         let doseStr = "";
         if (drugId === 'vancomycin') {
-             const minLoad = (20 * weight).toFixed(0);
-             const maxLoad = Math.min((25 * weight), 3000).toFixed(0); 
+             // Vancomycin uses ACTUAL weight for loading dose per protocol 
+             const minLoad = (20 * actualWeight).toFixed(0);
+             const maxLoad = Math.min((25 * actualWeight), 3000).toFixed(0); 
              doseStr = `${minLoad} - ${maxLoad} mg`;
         } else if (drugId === 'amikacin') {
-            doseStr = `~${(25 * weight).toFixed(0)} mg`;
+            // Uses dosing weight (AdjBW if BMI>23)
+            doseStr = `~${(25 * dosingWeight).toFixed(0)} mg`;
         } else if (drugId === 'gentamicin') {
-             doseStr = `~${(7 * weight).toFixed(0)} mg`;
+             // Uses dosing weight (AdjBW if BMI>23)
+             doseStr = `~${(7 * dosingWeight).toFixed(0)} mg`;
         }
         return doseStr;
     }
@@ -816,7 +830,8 @@
 
         // Loading Dose
         let loadDose = drug.loading;
-        const absLoad = calculateWeightBasedDose(params.drugId, params.dosingWeight);
+        // Pass both adjusted dosing weight and actual weight
+        const absLoad = calculateWeightBasedDose(params.drugId, params.dosingWeight, params.weight);
         if (absLoad) loadDose += ` <br><span style="color:#000; font-weight:normal;">(Calc: ${absLoad})</span>`;
         document.getElementById('rec_loading').innerHTML = loadDose;
 
