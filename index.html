@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antimicrobial Dosage Calculator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0056b3; /* Medical Blue */
+            --secondary: #f0f7ff;
+            --accent: #d32f2f; /* Alert Red */
+            --text: #333333;
+            --border: #dde1e6;
+            --shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f4f6f9;
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 90vh;
+        }
+
+        /* Header */
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* Navigation Tabs (Top Level) */
+        .nav-tabs {
+            display: flex;
+            background: #e9ecef;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            transition: 0.2s;
+            border-right: 1px solid var(--border);
+        }
+
+        .nav-tab.active {
+            background: white;
+            color: var(--primary);
+            border-top: 3px solid var(--primary);
+        }
+
+        .view-section {
+            display: none;
+            padding: 0;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        /* CALCULATOR LAYOUT */
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        /* Sidebar - Inputs */
+        .sidebar {
+            background: var(--secondary);
+            padding: 30px;
+            border-right: 1px solid var(--border);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #444;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0,86,179,0.1);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            font-weight: 400;
+            cursor: pointer;
+        }
+
+        .radio-label input {
+            margin-right: 6px;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 30px;
+        }
+
+        /* Sections */
+        .result-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--secondary);
+            padding-bottom: 8px;
+        }
+
+        /* Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .metric-box {
+            background: #fafafa;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #eee;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: #666;
+            display: block;
+        }
+
+        .metric-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Alert */
+        .septic-alert {
+            background-color: #fff4e5;
+            border-left: 5px solid #ff9800;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+            display: flex;
+            align-items: start;
+        }
+        
+        .septic-alert-icon {
+            font-size: 1.5rem;
+            margin-right: 15px;
+            color: #ff9800;
+        }
+
+        .septic-alert-content h4 {
+            margin: 0 0 5px 0;
+            color: #d87c00;
+            font-weight: 700;
+        }
+
+        .septic-alert-content p {
+            margin: 0;
+            font-size: 0.95rem;
+            color: #555;
+        }
+
+        /* Dose Display */
+        .dose-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .dose-row:last-child { border-bottom: none; }
+        .dose-label { font-weight: 600; width: 30%; color: #444; }
+        .dose-value { width: 70%; font-weight: 500; }
+        .highlight-red { color: var(--accent); font-weight: 700; }
+
+        /* LIBRARY TABLES */
+        .library-container {
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        .master-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            min-width: 900px;
+        }
+
+        .master-table th, .master-table td {
+            padding: 12px 15px;
+            border: 1px solid #dde1e6;
+            vertical-align: top;
+        }
+
+        .master-table th {
+            background-color: var(--primary);
+            color: white;
+            font-weight: 600;
+            text-align: left;
+            position: sticky;
+            top: 0;
+        }
+
+        .master-table tr:nth-child(even) { background-color: #f8f9fa; }
+        .master-table tr:hover { background-color: #e3f2fd; }
+
+        .dose-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .dose-list li {
+            margin-bottom: 4px;
+            padding-bottom: 4px;
+            border-bottom: 1px dashed #eee;
+        }
+        .dose-list li:last-child { border: none; }
+        .crcl-badge {
+            display: inline-block;
+            background: #e0e0e0;
+            color: #333;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            width: 85px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.8rem;
+            color: #999;
+            background: #fafafa;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+
+        @media (max-width: 768px) {
+            .calculator-grid { grid-template-columns: 1fr; }
+            .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Antimicrobial Dosage Calculator</h1>
+            <p>Internal Medicine • Rajavithi Hospital</p>
+        </div>
+    </header>
+
+    <div class="nav-tabs">
+        <div class="nav-tab active" onclick="switchMainView('view-calculator', this)">Dosage Calculator</div>
+        <div class="nav-tab" onclick="switchMainView('view-library', this)">Full Dosage Library</div>
+    </div>
+
+    <div id="view-calculator" class="view-section active">
+        <div class="calculator-grid">
+            <aside class="sidebar">
+                <h3 style="margin-top:0; color:var(--primary);">Patient Parameters</h3>
+                
+                <div class="form-group">
+                    <label>Antibiotic</label>
+                    <select id="drugSelect" class="form-control" onchange="updateCalculator()">
+                        <option value="ceftazidime">Ceftazidime</option>
+                        <option value="cefepime">Cefepime</option>
+                        <option value="cefoperazone">Cefoperazone/Sulbactam</option>
+                        <option value="pipertazo">Piperacillin/Tazobactam</option>
+                        <option value="ertapenem">Ertapenem</option>
+                        <option value="meropenem">Meropenem</option>
+                        <option value="meropenem_cns">Meropenem (MDR/CNS)</option>
+                        <option value="imipenem">Imipenem</option>
+                        <option value="fosfomycin">Fosfomycin</option>
+                        <option value="amikacin">Amikacin</option>
+                        <option value="gentamicin">Gentamicin</option>
+                        <option value="colistin">Colistin</option>
+                        <option value="vancomycin">Vancomycin</option>
+                        <option value="ciprofloxacin">Ciprofloxacin</option>
+                        <option value="levofloxacin">Levofloxacin</option>
+                        <option value="bactrim">Co-trimoxazole</option>
+                    </select>
+                </div>
+
+                <div id="albuminGroup" class="form-group" style="display:none;">
+                    <label>Serum Albumin (g/dL) <small>(For Ertapenem)</small></label>
+                    <input type="number" id="albumin" class="form-control" value="3.5" step="0.1" oninput="updateCalculator()">
+                </div>
+
+                <div class="form-group">
+                    <label>Gender</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="gender" value="male" checked onchange="updateCalculator()"> Male
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="gender" value="female" onchange="updateCalculator()"> Female
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Age (years)</label>
+                    <input type="number" id="age" class="form-control" value="60" oninput="updateCalculator()">
+                </div>
+
+                <div class="form-group">
+                    <label>Actual Weight (kg)</label>
+                    <input type="number" id="weight" class="form-control" value="65" oninput="updateCalculator()">
+                </div>
+
+                <div class="form-group">
+                    <label>Height (cm)</label>
+                    <input type="number" id="height" class="form-control" value="170" oninput="updateCalculator()">
+                </div>
+
+                <div class="form-group">
+                    <label>Serum Creatinine (mg/dL)</label>
+                    <input type="number" id="scr" class="form-control" value="1.0" step="0.1" oninput="updateCalculator()">
+                </div>
+            </aside>
+
+            <main class="main-content">
+                
+                <div class="result-card">
+                    <div class="section-title">Calculated Parameters</div>
+                    <div class="metrics-grid">
+                        <div class="metric-box">
+                            <span class="metric-label">BMI (kg/m²)</span>
+                            <div class="metric-value" id="res_bmi">--</div>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-label">IBW (kg)</span>
+                            <div class="metric-value" id="res_ibw">--</div>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-label">AdjBW (kg)</span>
+                            <div class="metric-value" id="res_adjbw">--</div>
+                        </div>
+                        <div class="metric-box" style="background: #e3f2fd; border-color: #bbdefb;">
+                            <span class="metric-label">CrCl (mL/min)</span>
+                            <div class="metric-value" id="res_crcl">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="septic-alert">
+                    <div class="septic-alert-icon">⚠️</div>
+                    <div class="septic-alert-content">
+                        <h4>Sepsis / Septic Shock Protocol</h4>
+                        <p><strong>Step 1:</strong> Loading Dose immediately.</p>
+                        <p><strong>Step 2:</strong> Full Dose (Normal Renal Dose) for first 24 hours.</p>
+                        <p><strong>Step 3:</strong> Maintenance Dose (Adjust for CrCl) only <strong>after</strong> 24 hours.</p>
+                    </div>
+                </div>
+
+                <div class="result-card">
+                    <div class="section-title">Recommended Regimen (<span id="drugNameDisplay"></span>)</div>
+                    
+                    <div class="dose-row">
+                        <div class="dose-label">Loading Dose</div>
+                        <div class="dose-value highlight-red" id="rec_loading">--</div>
+                    </div>
+
+                    <div class="dose-row">
+                        <div class="dose-label">Maintenance Dose (Calculated)</div>
+                        <div class="dose-value" id="rec_maintenance">--</div>
+                    </div>
+
+                    <div class="dose-row">
+                        <div class="dose-label">Administration / Stability</div>
+                        <div class="dose-value" id="rec_admin" style="font-size: 0.9rem; color: #555;">--</div>
+                    </div>
+                </div>
+
+                <div class="result-card">
+                    <div class="section-title">Quick Reference: <span id="quickRefName"></span></div>
+                    <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">Renal Adjustment Table</div>
+                    <table class="master-table" style="min-width: auto; margin-bottom: 20px;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 8px;">CrCl Range</th>
+                                <th style="padding: 8px;">Dose</th>
+                                <th style="padding: 8px;">Interval</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quickRenalBody"></tbody>
+                    </table>
+
+                    <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">Dialysis Dosing</div>
+                    <table class="master-table" style="min-width: auto;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 8px;">Mode</th>
+                                <th style="padding: 8px;">Recommendation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quickDialysisBody"></tbody>
+                    </table>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <div id="view-library" class="view-section">
+        <div class="library-container">
+            <h2 style="color: var(--primary);">Complete Antibiotic Dosage Library</h2>
+            <p>Full reference table for all antimicrobial agents in the protocol.</p>
+            
+            <table class="master-table" id="libraryTable">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Drug Name</th>
+                        <th style="width: 20%;">Loading Dose</th>
+                        <th style="width: 35%;">Maintenance Dose (Renal Adjustment)</th>
+                        <th style="width: 30%;">Dialysis Dosing (HD / CAPD / CRRT)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="footer">
+        Clinical Decision Support Tool • Wasupon Srisatit, MD.
+    </footer>
+</div>
+
+<script>
+    // --- Data Source ---
+    const drugData = {
+        ceftazidime: {
+            name: "Ceftazidime",
+            loading: "2 g + NSS/D5W 100 mL IV drip in 30 min",
+            admin: "Stable >24h in SWFI/NSS at 25°C. Causes pyridine toxicity if stored too long at 37°C.",
+            renal: [
+                { min: 50, dose: "2 g + 100mL IV drip 3-4 hr", freq: "q 8 hr" },
+                { min: 31, dose: "2 g + 100mL IV drip 3-4 hr", freq: "q 12 hr" },
+                { min: 16, dose: "2 g + 100mL IV drip 3-4 hr", freq: "q 24 hr" },
+                { min: 0, dose: "1-2 g + 100mL IV", freq: "q 24 hr" }
+            ],
+            dialysis: {
+                HD: "1-2 g + 100mL IV q 24 hr (Give after HD)",
+                CAPD: "1 g + 50mL IV q 24 hr",
+                CRRT: "2 g + 100mL IV q 8-12 hr"
+            }
+        },
+        cefepime: {
+            name: "Cefepime",
+            loading: "2 g + NSS/D5W 100 mL IV drip in 30 min",
+            admin: "Stable ≤24h in SWFI at 25°C. High-flux HD removes 70-85%.",
+            renal: [
+                { min: 60, dose: "2 g + 100mL IV drip 4 hr", freq: "q 8 hr" },
+                { min: 30, dose: "2 g + 100mL IV drip 4 hr", freq: "q 12 hr" },
+                { min: 11, dose: "2 g + 100mL IV drip 4 hr", freq: "q 24 hr" },
+                { min: 0, dose: "1-2 g + 100mL IV", freq: "q 24 hr" }
+            ],
+            dialysis: {
+                HD: "1-2 g + 100mL IV q 24 hr (Give after HD)",
+                CAPD: "1 g + 50mL IV q 24 hr",
+                CRRT: "2 g + 100mL IV q 8-12 hr"
+            }
+        },
+        cefoperazone: {
+            name: "Cefoperazone/Sulbactam",
+            loading: "4.5 g (3g Cef/1.5g Sul) IV drip 30 min",
+            admin: "Check bleeding risk (Hypoprothrombinemia). Vit K 10mg IV weekly rec.",
+            renal: [
+                { min: 30, dose: "3 g q 6 hr OR 4.5 g q 8 hr", freq: "drip 4 hr" },
+                { min: 15, dose: "3 g (Cef 8g, Sul 4g)", freq: "q 6-8 hr (drip 4 hr)" },
+                { min: 0, dose: "3 g (Cef 4-6g, Sul 2-3g)", freq: "q 8-12 hr (drip 4 hr)" }
+            ],
+            dialysis: {
+                HD: "3 g drip 4 hr q 12 hr (Sulbactam 2g/day)",
+                CAPD: "3 g drip 4 hr q 12 hr (Sulbactam 2g/day)",
+                CRRT: "3 g drip 4 hr q 8 hr (Sulbactam 3g/day)"
+            }
+        },
+        pipertazo: {
+            name: "Piperacillin/Tazobactam",
+            loading: "4.5 g + 100mL IV drip 30 min",
+            admin: "Max dose 18 g/day. Stability 24h in NSS at 25°C.",
+            renal: [
+                { min: 40, dose: "4.5 g drip 3-4 hr", freq: "q 6 hr" },
+                { min: 20, dose: "4.5 g drip 3-4 hr", freq: "q 8 hr" },
+                { min: 0, dose: "2.25 g drip 3-4 hr", freq: "q 6-8 hr" }
+            ],
+            dialysis: {
+                HD: "2.25 g drip 3-4 hr q 8 hr (Give after HD)",
+                CAPD: "2.25 g drip 3-4 hr q 6 hr",
+                CRRT: "4.5 g q 8 hr OR 2.25 g q 6 hr (drip 3-4 hr)"
+            }
+        },
+        ertapenem: {
+            name: "Ertapenem",
+            loading: "1 g + NSS 100 mL IV drip 30 min",
+            admin: "Do not mix with Dextrose. IM option available.",
+            renal: [
+                { min: 30, dose: "1 g drip 30 min", freq: "q 24 hr" },
+                { min: 0, dose: "500 mg drip 30 min", freq: "q 24 hr" }
+            ],
+            dialysis: {
+                HD: "500 mg q 24 hr (Give after HD). If Albumin <2.5: 1g q 24 hr.",
+                CAPD: "500 mg q 24 hr. If Albumin <2.5: 1g q 24 hr.",
+                CRRT: "No specific data (assume dose for CrCl >30)"
+            }
+        },
+        meropenem: {
+            name: "Meropenem (Standard)",
+            loading: "1 g + NSS 50 mL IV drip 30 min",
+            admin: "Unstable! 1g in 50mL NSS stable 12h @25°C, but only 3hr @35°C.",
+            renal: [
+                { min: 50, dose: "1 g drip 3 hr", freq: "q 8 hr" },
+                { min: 15, dose: "1 g drip 3 hr", freq: "q 12 hr" },
+                { min: 0, dose: "1 g drip 3 hr", freq: "q 24 hr" }
+            ],
+            dialysis: {
+                HD: "1 g drip 3 hr q 24 hr (Give after HD)",
+                CAPD: "1 g drip 3 hr q 24 hr (Loading 2g)",
+                CRRT: "1 g drip 3 hr q 8-12 hr"
+            }
+        },
+        meropenem_cns: {
+            name: "Meropenem (MDR/CNS)",
+            loading: "2 g + NSS 100 mL IV drip 30 min",
+            admin: "MDR/CNS requires higher dose. CNS infusion time is 30 min (not 3hr).",
+            renal: [
+                { min: 50, dose: "2 g drip 3 hr (MDR) / 30min (CNS)", freq: "q 8 hr" },
+                { min: 15, dose: "2 g drip 3 hr (MDR) / 30min (CNS)", freq: "q 12 hr" },
+                { min: 0, dose: "2 g drip 3 hr (MDR) / 30min (CNS)", freq: "q 24 hr" }
+            ],
+            dialysis: {
+                HD: "2 g drip 30 min q 24 hr (Give after HD)",
+                CAPD: "2 g drip 30 min q 24 hr",
+                CRRT: "2 g drip 3 hr (MDR) / 30min (CNS) q 8-12 hr"
+            }
+        },
+        imipenem: {
+            name: "Imipenem/Cilastatin",
+            loading: "1 g + 200mL IV drip 30 min",
+            admin: "Very unstable. 4hr @25°C in NSS. Max rate 500mg/30min.",
+            renal: [
+                { min: 50, dose: "500 mg drip 2-3 hr", freq: "q 6 hr" },
+                { min: 30, dose: "500 mg drip 2-3 hr", freq: "q 8 hr" },
+                { min: 15, dose: "250 mg drip 2-3 hr", freq: "q 6 hr" },
+                { min: 0, dose: "250 mg drip 2-3 hr", freq: "q 12 hr" }
+            ],
+            dialysis: {
+                HD: "250 mg drip 2-3 hr q 12 hr (Give after HD)",
+                CAPD: "250 mg drip 2-3 hr q 12 hr",
+                CRRT: "500 mg q 6-8 hr OR 250 mg q 6 hr"
+            }
+        },
+        fosfomycin: {
+            name: "Fosfomycin",
+            loading: "8 g + D5W 200 mL IV drip 30 min",
+            admin: "High Sodium (14.4 mEq/g). Monitor Na/K q 3 days. Use D5W.",
+            renal: [
+                { min: 80, dose: "4 g q 4-6 hr OR 6 g q 6-8 hr", freq: "drip 2 hr" },
+                { min: 50, dose: "3 g q 4-6 hr OR 4 g q 6-8 hr", freq: "drip 2 hr" },
+                { min: 15, dose: "3 g q 6-8 hr OR 4 g q 8-12 hr", freq: "drip 2 hr" },
+                { min: 0, dose: "4 g q 12 hr", freq: "drip 2 hr" }
+            ],
+            dialysis: {
+                HD: "4 g drip 2 hr q 12 hr (Give after HD)",
+                CAPD: "4 g drip 2 hr q 12 hr",
+                CRRT: "Same as normal renal function (CrCl ≥80)"
+            }
+        },
+        amikacin: {
+            name: "Amikacin",
+            loading: "25-30 mg/kg IV drip 30 min",
+            admin: "Target PK/PD: Cmax/MIC ~8-10. Use AdjBW if BMI ≥23.",
+            renal: [
+                { min: 30, dose: "15-20 mg/kg", freq: "q 24 hr" },
+                { min: 10, dose: "15 mg/kg", freq: "q 48 hr" },
+                { min: 0, dose: "15 mg/kg", freq: "q 48-72 hr" }
+            ],
+            dialysis: {
+                HD: "15 mg/kg q 48-72 hr (Give after HD)",
+                CAPD: "15 mg/kg q 72 hr",
+                CRRT: "15 mg/kg q 48 hr"
+            }
+        },
+        gentamicin: {
+            name: "Gentamicin",
+            loading: "7 mg/kg (Gram -) or 5 mg/kg (Gram +)",
+            admin: "Target PK/PD: Cmax/MIC ~8-10. Use AdjBW if BMI ≥23.",
+            renal: [
+                { min: 30, dose: "5-7 mg/kg", freq: "q 24 hr" },
+                { min: 10, dose: "5 mg/kg", freq: "q 48 hr" },
+                { min: 0, dose: "5 mg/kg", freq: "q 48-72 hr" }
+            ],
+            dialysis: {
+                HD: "3-5 mg/kg q 48-72 hr (Give after HD)",
+                CAPD: "3-5 mg/kg q 72 hr",
+                CRRT: "3-5 mg/kg q 48 hr"
+            }
+        },
+        colistin: {
+            name: "Colistin",
+            loading: "300 mg (100mg=150mg CBA) IV drip 30 min",
+            admin: "Target steady state avg 2 mcg/mL. Note: 150mg ~ 4.5 MIU.",
+            renal: [
+                { min: 50, dose: "150 mg drip 1 hr", freq: "q 12 hr" },
+                { min: 21, dose: "100 mg drip 1 hr", freq: "q 12 hr" },
+                { min: 0, dose: "150 mg drip 1 hr", freq: "q 24 hr" }
+            ],
+            dialysis: {
+                HD: "150 mg q 24 hr (non-HD day) / 200 mg q 24 hr (HD day)",
+                CAPD: "100 mg q 24 hr",
+                CRRT: "150 mg q 8 hr"
+            }
+        },
+        vancomycin: {
+            name: "Vancomycin",
+            loading: "20-25 mg/kg (ABW) (Max 3g)",
+            admin: "Rate 10-15 mg/min (Max 1g/hr) to avoid Red Man Syndrome. Conc Max 5mg/mL.",
+            renal: [
+                { min: 60, dose: "15-20 mg/kg (Max 4.5g/d)", freq: "q 12 hr" },
+                { min: 30, dose: "15-20 mg/kg", freq: "q 24 hr" },
+                { min: 0, dose: "15-20 mg/kg", freq: "q 48 hr" }
+            ],
+            dialysis: {
+                HD: "10-15 mg/kg q 48 hr (Give after HD)",
+                CAPD: "10-15 mg/kg q 48 hr",
+                CRRT: "10-15 mg/kg q 12-24 hr"
+            }
+        },
+        ciprofloxacin: {
+            name: "Ciprofloxacin",
+            loading: "None (Lipophilic)",
+            admin: "Watch for QT prolongation. Check ECG. Pseudo/A.baumannii needs q8h.",
+            renal: [
+                { min: 30, dose: "400 mg IV drip 1 hr", freq: "q 8-12 hr" },
+                { min: 0, dose: "400 mg IV drip 1 hr", freq: "q 12-24 hr" }
+            ],
+            dialysis: {
+                HD: "400 mg q 12-24 hr (Give after HD)",
+                CAPD: "400 mg q 24 hr",
+                CRRT: "400 mg q 8 hr"
+            }
+        },
+        levofloxacin: {
+            name: "Levofloxacin",
+            loading: "None (Lipophilic)",
+            admin: "Watch for QT prolongation. Drip 750mg over 90 mins.",
+            renal: [
+                { min: 30, dose: "750 mg IV", freq: "q 24 hr" },
+                { min: 0, dose: "750 mg IV", freq: "q 48 hr" }
+            ],
+            dialysis: {
+                HD: "750mg then 500mg q 48 hr (Give after HD)",
+                CAPD: "750mg then 500mg q 48 hr",
+                CRRT: "750mg then 500mg q 24 hr"
+            }
+        },
+        bactrim: {
+            name: "Co-trimoxazole",
+            loading: "No loading (unless specified)",
+            admin: "Mix in D5W ONLY. Volume sensitive (1amp/75mL=2hr stability). Do NOT refrigerate.",
+            renal: [
+                { min: 31, dose: "No adjustment", freq: "Based on Indication (15-20mg/kg/d)" },
+                { min: 0, dose: "Reduce dose by 50%", freq: "(e.g., 7.5-10 mg/kg/d)" }
+            ],
+            dialysis: {
+                HD: "Reduce dose 50%",
+                CAPD: "Reduce dose 50%",
+                CRRT: "No adjustment (Full dose)"
+            }
+        }
+    };
+
+    // --- Calculator Logic ---
+    function calculateParameters() {
+        const age = parseFloat(document.getElementById('age').value);
+        const weight = parseFloat(document.getElementById('weight').value);
+        const height = parseFloat(document.getElementById('height').value);
+        const scr = parseFloat(document.getElementById('scr').value);
+        const gender = document.querySelector('input[name="gender"]:checked').value;
+        const drugId = document.getElementById('drugSelect').value;
+
+        if (!age || !weight || !height || !scr || scr <= 0) return { error: true };
+
+        // Calculations
+        const heightM = height / 100;
+        const bmi = weight / (heightM * heightM);
+        const inchesOver5ft = (height - 150) / 2.54;
+        let ibw = (gender === 'male') ? 50 + (2.3 * inchesOver5ft) : 45.5 + (2.3 * inchesOver5ft);
+        let adjBw = ibw + 0.4 * (weight - ibw);
+        let dosingWeight = (bmi >= 23) ? adjBw : weight;
+        let crcl = ((140 - age) * ibw) / (72 * scr);
+        if (gender === 'female') crcl *= 0.85;
+
+        // UI Updates
+        document.getElementById('res_bmi').innerText = isNaN(bmi) ? '--' : bmi.toFixed(1);
+        document.getElementById('res_ibw').innerText = isNaN(ibw) ? '--' : ibw.toFixed(1);
+        document.getElementById('res_adjbw').innerText = isNaN(adjBw) ? '--' : adjBw.toFixed(1);
+        document.getElementById('res_crcl').innerText = isNaN(crcl) ? '--' : crcl.toFixed(0);
+
+        return { crcl, dosingWeight, drugId, error: false };
+    }
+
+    function getDoseForCrCl(drug, crcl) {
+        if (isNaN(crcl)) return "--";
+        if(drug.name.includes("Ertapenem")) {
+            const albumin = parseFloat(document.getElementById('albumin').value);
+            if (albumin < 2.5 && crcl >= 30) return "1 g q 12 hr (Low Albumin)";
+        }
+        for (let row of drug.renal) {
+            if (crcl >= row.min) return `${row.dose} <b>${row.freq}</b>`;
+        }
+        return "Check Specialist";
+    }
+
+    function calculateWeightBasedDose(drugId, weight) {
+        let doseStr = "";
+        if (drugId === 'vancomycin') {
+             const minLoad = (20 * weight).toFixed(0);
+             const maxLoad = Math.min((25 * weight), 3000).toFixed(0); 
+             doseStr = `${minLoad} - ${maxLoad} mg`;
+        } else if (drugId === 'amikacin') {
+            doseStr = `~${(25 * weight).toFixed(0)} mg`;
+        } else if (drugId === 'gentamicin') {
+             doseStr = `~${(7 * weight).toFixed(0)} mg`;
+        }
+        return doseStr;
+    }
+
+    function updateCalculator() {
+        const params = calculateParameters();
+        if (params.error) return;
+
+        const drug = drugData[params.drugId];
+
+        // Toggle Albumin field
+        document.getElementById('albuminGroup').style.display = (params.drugId === 'ertapenem') ? 'block' : 'none';
+
+        // Display Name
+        document.getElementById('drugNameDisplay').innerText = drug.name;
+        document.getElementById('quickRefName').innerText = drug.name;
+
+        // Loading Dose
+        let loadDose = drug.loading;
+        const absLoad = calculateWeightBasedDose(params.drugId, params.dosingWeight);
+        if (absLoad) loadDose += ` <br><span style="color:#000; font-weight:normal;">(Calc: ${absLoad})</span>`;
+        document.getElementById('rec_loading').innerHTML = loadDose;
+
+        // Maintenance Dose
+        const maintDose = getDoseForCrCl(drug, params.crcl);
+        document.getElementById('rec_maintenance').innerHTML = maintDose;
+
+        // Admin
+        document.getElementById('rec_admin').innerText = drug.admin;
+
+        // Quick Ref Tables
+        renderQuickTables(drug, params.crcl);
+    }
+
+    function renderQuickTables(drug, currentCrCl) {
+        // Renal Table
+        const renalBody = document.getElementById('quickRenalBody');
+        renalBody.innerHTML = '';
+        drug.renal.forEach((row, index) => {
+            let rangeStr = (index === 0) ? `≥ ${row.min}` : (row.min === 0 ? `< ${drug.renal[index-1].min}` : `${row.min} - ${drug.renal[index-1].min - 1}`);
+            
+            const tr = document.createElement('tr');
+            // Highlight Logic
+            let upperBound = (index === 0) ? 9999 : drug.renal[index-1].min;
+            if (!isNaN(currentCrCl) && currentCrCl >= row.min && currentCrCl < upperBound) {
+                tr.style.backgroundColor = "#e3f2fd";
+                tr.style.fontWeight = "bold";
+                tr.style.borderLeft = "4px solid var(--primary)";
+            }
+            tr.innerHTML = `<td>${rangeStr}</td><td>${row.dose}</td><td>${row.freq}</td>`;
+            renalBody.appendChild(tr);
+        });
+
+        // Dialysis Table
+        const diaBody = document.getElementById('quickDialysisBody');
+        diaBody.innerHTML = '';
+        for (const [mode, dose] of Object.entries(drug.dialysis)) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${mode}</td><td>${dose}</td>`;
+            diaBody.appendChild(tr);
+        }
+    }
+
+    // --- Library View Logic ---
+    function populateLibrary() {
+        const tbody = document.querySelector('#libraryTable tbody');
+        
+        for (const key in drugData) {
+            const drug = drugData[key];
+            const tr = document.createElement('tr');
+            
+            // Name & Loading
+            let html = `<td><strong>${drug.name}</strong></td>`;
+            html += `<td>${drug.loading}</td>`;
+            
+            // Renal (List)
+            html += `<td><ul class="dose-list">`;
+            drug.renal.forEach((row, idx) => {
+                let rangeStr = (idx === 0) ? `≥ ${row.min}` : (row.min === 0 ? `< ${drug.renal[idx-1].min}` : `${row.min}-${drug.renal[idx-1].min - 1}`);
+                html += `<li><span class="crcl-badge">CrCl ${rangeStr}</span> ${row.dose} ${row.freq}</li>`;
+            });
+            html += `</ul></td>`;
+            
+            // Dialysis (List)
+            html += `<td><ul class="dose-list">`;
+            for (const [mode, dose] of Object.entries(drug.dialysis)) {
+                html += `<li><strong>${mode}:</strong> ${dose}</li>`;
+            }
+            html += `</ul></td>`;
+
+            tr.innerHTML = html;
+            tbody.appendChild(tr);
+        }
+    }
+
+    function switchMainView(viewId, tabElement) {
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(viewId).classList.add('active');
+        tabElement.classList.add('active');
+    }
+
+    // Init
+    window.onload = function() {
+        populateLibrary();
+        updateCalculator();
+    };
+</script>
+
+</body>
+</html>
